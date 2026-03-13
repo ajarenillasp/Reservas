@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripción - Evento Semanal</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .date-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .date-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .date-card:hover:not(.disabled) {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .date-card.selected {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+        
+        .date-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f7fafc;
+        }
+        
+        .date-day {
+            font-weight: bold;
+            color: #2d3748;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .date-time {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .date-capacity {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .date-capacity.available {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .date-capacity.limited {
+            background: #fef5e7;
+            color: #744210;
+        }
+        
+        .date-capacity.full {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="email"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #718096;
+            margin-top: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #9ae6b4;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #fc8181;
+        }
+        
+        .alert-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 2px solid #90cdf4;
+        }
+        
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .admin-table th,
+        .admin-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .admin-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .admin-table tr:hover {
+            background: #f7fafc;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #718096;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .admin-link {
+            text-align: center;
+            margin-top: 20px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .admin-link a {
+            color: white;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-tab {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .filter-tab:hover {
+            border-color: #667eea;
+        }
+        
+        .filter-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Configuración
+        const CONFIG = {
+            maxPerSession: 12,
+            sessions: [
+                { id: 'lun', day: 'Lunes', date: '17/03', time: '10:00' },
+                { id: 'mar', day: 'Martes', date: '18/03', time: '10:00' },
+                { id: 'mie', day: 'Miércoles', date: '19/03', time: '10:00' },
+                { id: 'jue', day: 'Jueves', date: '20/03', time: '10:00' }
+            ],
+            adminPassword: 'admin123'
+        };
+
+        // Storage usando localStorage del navegador
+        const storage = {
+            get: (key) => {
+                try {
+                    const value = localStorage.getItem(key);
+                    return value ? JSON.parse(value) : null;
+                } catch (error) {
+                    console.error('Error reading storage:', error);
+                    return null;
+                }
+            },
+            set: (key, value) => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return true;
+                } catch (error) {
+                    console.error('Error writing storage:', error);
+                    return false;
+                }
+            },
+            remove: (key) => {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch (error) {
+                    console.error('Error removing storage:', error);
+                    return false;
+                }
+            }
+        };
+
+        function App() {
+            const [view, setView] = useState('registration');
+            const [registrations, setRegistrations] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                loadRegistrations();
+                
+                // Escuchar cambios en otros tabs/ventanas
+                const handleStorageChange = (e) => {
+                    if (e.key === 'registrations') {
+                        loadRegistrations();
+                    }
+                };
+                window.addEventListener('storage', handleStorageChange);
+                
+                return () => window.removeEventListener('storage', handleStorageChange);
+            }, []);
+
+            const loadRegistrations = () => {
+                const data = storage.get('registrations');
+                setRegistrations(data || []);
+                setLoading(false);
+            };
+
+            const saveRegistrations = (newRegistrations) => {
+                storage.set('registrations', newRegistrations);
+                setRegistrations(newRegistrations);
+            };
+
+            const addRegistration = (registration) => {
+                const newRegistrations = [...registrations, registration];
+                saveRegistrations(newRegistrations);
+            };
+
+            const clearAllData = () => {
+                if (confirm('¿Estás seguro de eliminar TODAS las inscripciones?')) {
+                    storage.remove('registrations');
+                    setRegistrations([]);
+                    alert('Datos eliminados correctamente');
+                }
+            };
+
+            if (loading) {
+                return (
+                    <div className="container">
+                        <div className="card" style={{textAlign: 'center'}}>
+                            <h1>Cargando...</h1>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <>
+                    {view === 'registration' ? (
+                        <RegistrationView 
+                            registrations={registrations}
+                            onRegister={addRegistration}
+                            onAdminClick={() => setView('admin')}
+                        />
+                    ) : (
+                        <AdminView 
+                            registrations={registrations}
+                            onBack={() => setView('registration')}
+                            onClearData={clearAllData}
+                        />
+                    )}
+                </>
+            );
+        }
+
+        function RegistrationView({ registrations, onRegister, onAdminClick }) {
+            const [selectedSession, setSelectedSession] = useState(null);
+            const [formData, setFormData] = useState({ name: '', email: '' });
+            const [message, setMessage] = useState(null);
+            const [submitting, setSubmitting] = useState(false);
+
+            const getSessionCount = (sessionId) => {
+                return registrations.filter(r => r.sessionId === sessionId).length;
+            };
+
+            const getAvailableSlots = (sessionId) => {
+                return CONFIG.maxPerSession - getSessionCount(sessionId);
+            };
+
+            const isEmailRegistered = (email) => {
+                return registrations.some(r => 
+                    r.email.toLowerCase().trim() === email.toLowerCase().trim()
+                );
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setMessage(null);
+                setSubmitting(true);
+
+                if (!selectedSession) {
+                    setMessage({ type: 'error', text: 'Por favor selecciona una fecha' });
+                    setSubmitting(false);
+                    return;
+                }
+
+                if (!formData.name.trim()) {
+                    setMessage({ type: 'error', text: 'Por favor ingresa tu nombre' });
+                    setSubmitting(false);
+                    return;
+                }
+
+                if (!formData.email.trim() || !formData.email.includes('@')) {
+                    setMessage({ type: 'error', text: 'Por favor ingresa un email válido' });
+                    setSubmitting(false);
+                    return;
+                }
+
+                if (isEmailRegistered(formData.email)) {
+                    setMessage({ 
+                        type: 'error', 
+                        text: '❌ Este email ya está registrado. Solo puedes inscribirte una vez.' 
+                    });
+                    setSubmitting(false);
+                    return;
+                }
+
+                if (getAvailableSlots(selectedSession) <= 0) {
+                    setMessage({ 
+                        type: 'error', 
+                        text: '❌ Lo sentimos, esta fecha ya no tiene cupos disponibles.' 
+                    });
+                    setSubmitting(false);
+                    return;
+                }
+
+                const registration = {
+                    id: Date.now(),
+                    sessionId: selectedSession,
+                    name: formData.name.trim(),
+                    email: formData.email.trim().toLowerCase(),
+                    timestamp: new Date().toISOString()
+                };
+
+                onRegister(registration);
+
+                setMessage({ 
+                    type: 'success', 
+                    text: '✅ ¡Inscripción exitosa! Te esperamos el ' + 
+                          CONFIG.sessions.find(s => s.id === selectedSession).day + 
+                          ' a las 10:00 AM' 
+                });
+                
+                setFormData({ name: '', email: '' });
+                setSelectedSession(null);
+                setSubmitting(false);
+            };
+
+            return (
+                <div className="container">
+                    <div className="card">
+                        <h1>📅 Inscripción al Evento</h1>
+                        <p className="subtitle">Selecciona una fecha y completa tus datos</p>
+
+                        {message && (
+                            <div className={`alert alert-${message.type}`}>
+                                {message.text}
+                            </div>
+                        )}
+
+                        <div className="date-grid">
+                            {CONFIG.sessions.map(session => {
+                                const available = getAvailableSlots(session.id);
+                                const isFull = available <= 0;
+                                const isLimited = available > 0 && available <= 3;
+
+                                return (
+                                    <div
+                                        key={session.id}
+                                        className={`date-card ${
+                                            selectedSession === session.id ? 'selected' : ''
+                                        } ${isFull ? 'disabled' : ''}`}
+                                        onClick={() => !isFull && setSelectedSession(session.id)}
+                                    >
+                                        <div className="date-day">{session.day}</div>
+                                        <div className="date-time">
+                                            {session.date} • {session.time}h
+                                        </div>
+                                        <div className={`date-capacity ${
+                                            isFull ? 'full' : isLimited ? 'limited' : 'available'
+                                        }`}>
+                                            {isFull ? 'COMPLETO' : `${available} cupos`}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label>Nombre completo *</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Ej: Juan Pérez"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Email *</label>
+                                <input
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    placeholder="tu@email.com"
+                                    required
+                                />
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                className="btn"
+                                disabled={submitting}
+                            >
+                                {submitting ? 'Inscribiendo...' : 'Confirmar Inscripción'}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="admin-link">
+                        <a onClick={onAdminClick}>Acceso administrador</a>
+                    </div>
+                </div>
+            );
+        }
+
+        function AdminView({ registrations, onBack, onClearData }) {
+            const [authenticated, setAuthenticated] = useState(false);
+            const [password, setPassword] = useState('');
+            const [filterSession, setFilterSession] = useState('all');
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (password === CONFIG.adminPassword) {
+                    setAuthenticated(true);
+                } else {
+                    alert('Contraseña incorrecta');
+                    setPassword('');
+                }
+            };
+
+            const exportToExcel = () => {
+                const data = filteredRegistrations.map(r => {
+                    const session = CONFIG.sessions.find(s => s.id === r.sessionId);
+                    return {
+                        'Nombre': r.name,
+                        'Email': r.email,
+                        'Día': session.day,
+                        'Fecha': session.date,
+                        'Hora': session.time,
+                        'Inscrito el': new Date(r.timestamp).toLocaleString('es-ES')
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
+                XLSX.writeFile(wb, `inscripciones_${new Date().toISOString().split('T')[0]}.xlsx`);
+            };
+
+            if (!authenticated) {
+                return (
+                    <div className="container">
+                        <div className="card">
+                            <h1>🔒 Acceso Administrador</h1>
+                            <form onSubmit={handleLogin} style={{marginTop: '30px'}}>
+                                <div className="form-group">
+                                    <label>Contraseña</label>
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Ingresa la contraseña"
+                                        autoFocus
+                                    />
+                                </div>
+                                <button type="submit" className="btn">Ingresar</button>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-secondary" 
+                                    onClick={onBack}
+                                >
+                                    Volver
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            const getSessionStats = () => {
+                return CONFIG.sessions.map(session => ({
+                    ...session,
+                    count: registrations.filter(r => r.sessionId === session.id).length,
+                    available: CONFIG.maxPerSession - registrations.filter(r => r.sessionId === session.id).length
+                }));
+            };
+
+            const filteredRegistrations = filterSession === 'all' 
+                ? registrations 
+                : registrations.filter(r => r.sessionId === filterSession);
+
+            const stats = getSessionStats();
+            const totalRegistrations = registrations.length;
+            const totalAvailable = CONFIG.maxPerSession * 4 - totalRegistrations;
+
+            return (
+                <div className="container">
+                    <div className="card">
+                        <h1>📊 Panel de Administración</h1>
+                        <p className="subtitle">Gestiona las inscripciones del evento</p>
+
+                        <div className="stats">
+                            <div className="stat-card">
+                                <div className="stat-number">{totalRegistrations}</div>
+                                <div className="stat-label">Total Inscritos</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-number">{totalAvailable}</div>
+                                <div className="stat-label">Cupos Disponibles</div>
+                            </div>
+                        </div>
+
+                        <h2 style={{marginTop: '30px', marginBottom: '15px', color: '#2d3748'}}>
+                            Cupos por Sesión
+                        </h2>
+                        <div className="stats">
+                            {stats.map(session => (
+                                <div key={session.id} className="stat-card">
+                                    <div className="stat-number">{session.count}</div>
+                                    <div className="stat-label">
+                                        {session.day}<br/>
+                                        ({session.available} disponibles)
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <h2 style={{marginTop: '30px', marginBottom: '15px', color: '#2d3748'}}>
+                            Lista de Inscritos ({filteredRegistrations.length})
+                        </h2>
+
+                        <div className="filter-tabs">
+                            <div 
+                                className={`filter-tab ${filterSession === 'all' ? 'active' : ''}`}
+                                onClick={() => setFilterSession('all')}
+                            >
+                                Todos ({registrations.length})
+                            </div>
+                            {CONFIG.sessions.map(session => (
+                                <div
+                                    key={session.id}
+                                    className={`filter-tab ${filterSession === session.id ? 'active' : ''}`}
+                                    onClick={() => setFilterSession(session.id)}
+                                >
+                                    {session.day} ({registrations.filter(r => r.sessionId === session.id).length})
+                                </div>
+                            ))}
+                        </div>
+
+                        {filteredRegistrations.length === 0 ? (
+                            <div className="alert alert-info">
+                                No hay inscripciones todavía
+                            </div>
+                        ) : (
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Email</th>
+                                        <th>Sesión</th>
+                                        <th>Inscrito el</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredRegistrations.map(reg => {
+                                        const session = CONFIG.sessions.find(s => s.id === reg.sessionId);
+                                        return (
+                                            <tr key={reg.id}>
+                                                <td>{reg.name}</td>
+                                                <td>{reg.email}</td>
+                                                <td>{session.day} {session.date} • {session.time}h</td>
+                                                <td>{new Date(reg.timestamp).toLocaleString('es-ES')}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+
+                        <div style={{marginTop: '30px', display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                            <button 
+                                className="btn" 
+                                onClick={exportToExcel}
+                                style={{flex: 1}}
+                            >
+                                📥 Exportar a Excel
+                            </button>
+                            <button 
+                                className="btn btn-secondary" 
+                                onClick={onBack}
+                                style={{flex: 1}}
+                            >
+                                ← Volver al formulario
+                            </button>
+                            <button 
+                                className="btn btn-danger" 
+                                onClick={onClearData}
+                                style={{flex: 1}}
+                            >
+                                🗑️ Eliminar todos los datos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
